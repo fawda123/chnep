@@ -1,0 +1,134 @@
+Data Source(s),Code,Meaning
+,!,Data deviate from historically established concentration ranges.
+,*,Not reported or not analyzed due to interference
+,?,Data are rejected and should not be used
+,A,Value reported is the mean of two or more determinations
+,B,Results based upon colony counts outside the acceptable range
+,D,Field measurement
+,E,Composite sample from multiple stations
+,F,Indicates female sex
+,G,"The analyte was detected at or above the method detection limit in both the sample and the associated field blank, equipment blank, or trip blank, and the blank value was greater than 10% of the associated sample value. The value in the blank shall not be subtracted from associated samples."
+,H,Value based on field kit determination
+,I,Result value is between the laboratory method detection limit and the laboratory practical quantitation limit.
+,J,Estimated value questionable or not accurate
+,K,Actual value is known to be less than the value given
+,L,Actual value is known to be greater than the value given
+,M,"Presence of material verified, but not quantified"
+,N,Presumptive evidence of presence of material
+,O,Sampled for but analysis lost or not performed
+,Q,Sample held beyond accepted holding time
+,R,Significant rain in the past 48 hours
+,S,Secchi disk visible to bottom of waterbody. The value reported is the depth of the waterbody at the location of the Secchi disk measurement
+,T,Value reported is less than the laboratory method detection limit
+,U,Material was analyzed for but not detected
+,V,Analyte was detected in both the sample and the associated method blank
+,W,"Value observed is less than lowest value reportable under T code. This code is used when a positive value is not observed or calculated for a result, i.e., the test instrument or calculation is not capable of producing negative values."
+,X,"Indicates, when reporting results from a Stream Condition Index Analysis (LT 7200 and FS 7420), that insufficient individuals were present in the sample to achieve a minimum of 280 organisms for identification (the method calls for two aliquots of 140-160 organisms), suggesting either extreme environmental stress or a sampling error."
+,Y,Analysis form unpreserved or improperly preserved sample
+,Z,Too many colonies were present - the numeric value represents the filtration volume.
+SJRWMD_HYDRO,1,Good continuous records
+SWFWMD_HYDRO,1,Good continuous records
+SJRWMD_HYDRO,2,Good quality edited data
+SWFWMD_HYDRO,2,Good quality edited data
+SJRWMD_HYDRO,3,Good quality data obtained from USGS
+SJRWMD_HYDRO,4,Provisional data obtained from USGS
+SJRWMD_HYDRO,26,Good daily read records
+SJRWMD_HYDRO,30,Irregular Time Rate Data - weekly/monthly read.
+SJRWMD_HYDRO,76,Reliable interpolation
+SJRWMD_HYDRO,77,"Correlation with other station, same variable"
+SJRWMD_HYDRO,79,Records partly estimated
+SWFWMD_HYDRO,79,Fewer than 24 values in daily aggregate
+SJRWMD_HYDRO,80,Accumulated
+SWFWMD_HYDRO,80,Accumulated
+SJRWMD_HYDRO,81,Wet day within accumulated rainfall period
+SJRWMD_HYDRO,82,Linear interpolation across gap in records.
+SWFWMD_HYDRO,83,Verification Value
+SWFWMD_HYDRO,84,Could not locate site
+SWFWMD_HYDRO,85,Canker Alert - no site access
+SWFWMD_HYDRO,86,Site destroyed
+SWFWMD_HYDRO,87,Weeds too high to read gage
+SWFWMD_HYDRO,88,No access to site
+SWFWMD_HYDRO,89,Gage Missing
+SWFWMD_HYDRO,90,Less than
+SWFWMD_HYDRO,91,Greater than
+SWFWMD_HYDRO,95,Estimated
+SWFWMD_HYDRO,96,Override
+SWFWMD_HYDRO,97,Surveyed
+SWFWMD_HYDRO,98,Below staff gauge
+SJRWMD_HYDRO,104,Records estimated
+SJRWMD_HYDRO,140,Provisional data - quality unknown
+SWFWMD_HYDRO,140,Provisional data - quality unknown
+SJRWMD_HYDRO,150,Rating table extrapolated due to inadequate gauging information
+SJRWMD_HYDRO,151,Data Missing
+SWFWMD_HYDRO,151,Data Missing
+SWFWMD_HYDRO,153,Above staff gauge
+SWFWMD_HYDRO,154,Out of service
+SJRWMD_HYDRO,175,Below instrument threshold
+SJRWMD_HYDRO,201,Data not recorded
+SJRWMD_HYDRO,254,Rating Table Exceeded
+SJRWMD_HYDRO,255,Data Not Recorded
+SWFWMD_HYDRO,!,Data are provisional
+SJRWMD_WQ,#,See project manager remarks
+SEMCO_WRAD,$,"Calculated by retrieval software. Numerical value was neither measured nor reported to the database, but was calculated from other data available during generation of the retrieval report"
+LAKECO_SWWQ,*,Surrogate outside QC limits
+SWFWMD_HYDRO,<,Less than result value
+USGS_NWIS,<,Less than result value
+SJRWMD_WQ,>,Field blank analyte value was high (> 2 x MDL).
+USGS_NWIS,>,Greater than result value
+SWFWMD_HYDRO,>,Greater than result value
+SWFWMD_HYDRO,A,Accumulated sum or total
+LAKECO_SWWQ,B,Analyte detected in blank and sample
+PINELLAS,C,Multiple interpretations - contact laboratory manager
+SEMCO_WRAD,C,Calculated from other data available
+SWFWMD_HYDRO,C,Canker Alert - no site access
+LAKECO_SWWQ,C,Coelute
+SWFWMD_HYDRO,D,Out of service
+LAKECO_SWWQ,D,Diluted
+PINELLAS,DIL,Diluted
+SWFWMD_HYDRO,E,Estimated
+LAKECO_SWWQ,E,Exceeds calibration range
+SWFWMD_HYDRO,F,Fewer than 24 values in daily aggregate
+LAKECO_SWWQ,F,Calculated from higher dilution
+PINELLAS,G,Value reported is the maximum of two or more determinations
+SEMCO_WRAD,G,Value reported is the maximum of two or more determinations
+SWFWMD_HYDRO,G,Site destroyed
+LAKECO_SWWQ,G,Greater than result value
+SWFWMD_HYDRO,H,Weeds too high to read gage
+LAKECO_SWWQ,I,Insufficient sample
+SWFWMD_HYDRO,J,No access to site
+LAKECO_SWWQ,J,Estimated value less than quantitation limit
+SFWMD_WQ,J1,Surrogate % rec exceeded
+SFWMD_WQ,J2,No known QC criteria exist
+SFWMD_WQ,J3,Precision or accuracy criteria not met
+SFWMD_WQ,J4,Matrix interference
+SFWMD_WQ,J5,Improper laboratory or field protocol
+SWFWMD_HYDRO,L,Could not locate site
+SWFWMD_HYDRO,M,Data missing
+SWFWMD_WQ,M,Presence verified but not quantified - result value is PQL
+LAKECO_SWWQ,M,Matrix interference
+PINELLAS,MCL,Maximum Contamination Level for a regulated analyte
+PINELLAS,MDL,Method Detection Level for an analyte
+LAKECO_SWWQ,N,Not measured
+PINELLAS,NA,Not Applicable - no sample collected nor field data to enter
+SFWMD_WQ,NOB,No bottle sample
+SFWMD_WQ,NVZ,Not a valid zero value contact laboratory manager
+PINELLAS,P,Bacteria were present in a sample
+SEMCO_WRAD,P,Too numerous to count
+SJRWMD_WQ,P,Presumptive evidence of presence of material
+SWFWMD_HYDRO,P,Gage missing
+SFWMD_WQ,PMF,Contact project manager
+SFWMD_WQ,PMR,Contact project manager
+PINELLAS,QNS,Sample Quality Insufficient for analysis
+PINELLAS,S,Laboratory test
+SEMCO_WRAD,S,Laboratory test
+SWFWMD_HYDRO,S,Surveyed
+LAKECO_SWWQ,S,Surrogate
+LAKECO_SWWQ,V,Detected value
+SEMCO_WRAD,W,"Value observed is less than the lowest value reportable under remark ""T"""
+SWFWMD_WQ,W,Well construction aspects may influence values
+LAKECO_SWWQ,W,Between CRD and IDL
+SEMCO_WRAD,X,Value is quasi vertically-integrated sample
+SWFWMD_HYDRO,X,Below staff gage
+SWFWMD_WQ,X,Estimated value not accurate
+LAKECO_SWWQ,x,None
+SWFWMD_HYDRO,Y,Above staff gage
