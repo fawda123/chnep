@@ -1,18 +1,18 @@
 "analyte","n.removals"
 "Color",0
 "BOD",0
-"Chl-a",0
+"Chl-a",1
 "DO Conc",8
 "DO Sat",1
 "Fecal",0
-"TN",0
-"NH4",0
+"TN",8
+"NH4",22
 "TKN",0
-"NOx",0
+"NOx",38
 "pH",1
-"TP",0
-"PO4",0
-"Sp Cond",2
+"TP",2
+"PO4",34
+"Sp Cond",3
 "Temp",0
 "TSS",21
-"Turbidity",0
+"Turbidity",1
