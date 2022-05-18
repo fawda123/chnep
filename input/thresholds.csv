@@ -1,18 +1,18 @@
 analyte,low,high,unit,comment
-Color,0,600,PCU,typical values in Florida range up to 600 (no values above 600)
-BOD,0,NA,mg/l,no upper limit set (max observed is 12.2)
-Chl-a,0,NA,ug/l,no upper limit set (max observed is 939)
+Color,0.001,600,PCU,typical values in Florida range up to 600 (no values above 600)
+BOD,0.001,NA,mg/l,no upper limit set (max observed is 12.2)
+Chl-a,0.001,NA,ug/l,no upper limit set (max observed is 939)
 DO Conc,0,20,mg/l,informed by the data (values >19 range from 35 to 150; possibly some mislabeled DO saturations)
 DO Sat,0,200,percent (%),"informed by the data (there are many values ranging from 100-161, then jumps to 225)"
 Fecal,0,NA,cfu/100ml,no upper limit set (max observed is 29000)
-TN,0,NA,ug/l,no upper limit set (max observed is 17000)
-NH4,0,NA,ug/l,no upper limit set (max observed is 7000)
-TKN,0,NA,ug/l,no upper limit set (max observed is 17000)
-NOx,0,NA,ug/l,no upper limit set (max observed is 10000)
-pH,2,14,None,"informed by the data (min observed is 0.40, next lowest value is 2.8; max value is 10.5)"
-TP,0,NA,ug/l,"no upper limit set (max observed is 6800, next lowest value is 3870)"
-PO4,0,NA,ug/l,no upper limit set (max observed is 3740)
-Sp Cond,0,100000,umho,seawater cond is ~55k umho (5 values exceed 70k; 2 values exceed 100k: 254k and 322k)
+TN,0.001,NA,ug/l,no upper limit set (max observed is 17000)
+NH4,0.001,NA,ug/l,no upper limit set (max observed is 7000)
+TKN,0.001,NA,ug/l,no upper limit set (max observed is 17000)
+NOx,0.001,NA,ug/l,no upper limit set (max observed is 10000)
+pH,2,14,pH,"informed by the data (min observed is 0.40, next lowest value is 2.8; max value is 10.5)"
+TP,0.001,NA,ug/l,"no upper limit set (max observed is 6800, next lowest value is 3870)"
+PO4,0.001,NA,ug/l,no upper limit set (max observed is 3740)
+Sp Cond,0.001,100000,umho,seawater cond is ~55k umho (5 values exceed 70k; 2 values exceed 100k: 254k and 322k)
 Temp,23,122,deg F,"limits are -5C and 50C, per USF (observed range is 34-104)"
-TSS,0,1000,mg/l,"informed by reasonable limits (raw wastewater is ~300) and the data: Max observed value in the hundreds is 638, then values jump to >7000 and max at ~97k)  "
-Turbidity,0,NA,NTU,no upper limit set (max observed is 367)
+TSS,0.001,1000,mg/l,"informed by reasonable limits (raw wastewater is ~300) and the data: Max observed value in the hundreds is 638, then values jump to >7000 and max at ~97k)  "
+Turbidity,0.001,NA,NTU,no upper limit set (max observed is 367)
