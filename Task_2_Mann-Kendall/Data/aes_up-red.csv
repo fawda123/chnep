@@ -1,0 +1,7 @@
+trend,size,outline,fill,shape
+"Up trend, large",4,1,"rgb(1,0.2,0.2,0.8)",24
+"Up trend, small",2,1,"rgb(1,0.2,0.2,0.8)",24
+No trend,2,1,"rgb(1,1,0,0.8)",21
+"Down trend, small",2,1,"rgb(0,0.75,0.2,0.8)",25
+"Down trend, large",4,1,"rgb(0,0.75,0.2,0.8)",25
+Insufficient data,2,1,"rgb(0.7,0.7,0.7,0.5)",22

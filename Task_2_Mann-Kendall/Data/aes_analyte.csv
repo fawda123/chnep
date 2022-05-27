@@ -1,0 +1,18 @@
+analyte,long.name,aes
+TN,Total Nitrogen,aes.up.red
+TKN,Total Kjeldahl Nitrogen,aes.up.red
+NOx,Nitrate+Nitrite as N,aes.up.red
+TP,Total Phosphorus,aes.up.red
+DO Conc,Dissolved Oxygen Concentration,aes.dn.red
+pH,pH,aes.neutral
+Temp,Temperature,aes.neutral
+Color,Apparent Color,aes.neutral
+Chl-a,Chlorophyll-a,aes.up.red
+Fecal,Fecal Coliform,aes.up.red
+Turbidity,Turbidity,aes.up.red
+DO Sat,Dissolved Oxygen Saturation,aes.dn.red
+Sp Cond,Specific Conductance,aes.up.red
+PO4,Phosphate as P,aes.up.red
+NH4,Ammonia as N,aes.up.red
+TSS,Total Suspended Solids,aes.up.red
+BOD,Biological Oxygen Demand,aes.up.red
