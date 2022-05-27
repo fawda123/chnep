@@ -23,7 +23,7 @@ editor_options:
   * [Standardize sample depth units](#DepthUnits)
   * [Subset surface sample data](#Depths)
   * [Remove duplicate records](#Dupes)
-  * [Associate stations with strata](#Strata)
+  * [Monitoring stations and strata](#Strata)
   * [Remove records flagged with fatal qualifier codes](#Qualifiers)
     + [Qualifier codes and definitions](#Qualifiers1)
     + [Fatal qualifier codes](#Qualifiers2)
@@ -464,41 +464,42 @@ which(duplicated(df2))  # confirm no duplicates
 [top](#top)
 
 
-# Associate stations with strata {#Strata}
+# Monitoring stations and strata {#Strata}
 
-We start by capitalizing all station names in `df2` to remove any inconsistencies in capitalization.
+We start by capitalizing all station names (`StationID`) to remove any inconsistencies in capitalization.
 ```{r}
 df2$StationID <- toupper( df2$StationID )
 ```
-At the top of this script, we loaded strata information from a csv file. We call the `plyr::mapvalues()` function to associate `StationID` values (in `df2`) with `Stratum` values (in `strata`), and we store the results in a new `Stratum` column in `df2`. Some monitoring stations are not part of strata, and when a `StationID` value in `df2` does not appear in the `strata` dataframe, the `StationID` value is copied to the `Stratum` column in `df2`. Subsequent checks confirm that each station is associated with only one strata (each strata can be associated with one or more stations).
+Because the water quality data were provided from various agencies (`DataSource`), it is possible that the `StationID` labels are not geographically unique. That is, two data providers may use the same `StationID` to refer to different real-world sample locations. To resolve this issue, we create unique station labels by concatenating the data source (`DataSource`) and station (`StationID`) information and store the unique labels in a new column, `DS.StationID`. And to illustrate, we print the first six unique labels.
+```{r}
+df2$DS.StationID <- paste( df2$DataSource, ":", df2$StationID )
+df2$DS.StationID %>% unique() %>% head()
+```
+Some monitoring stations are treated as a group, or stratum, and the station-stratum associations are provided in the `strata` dataframe loaded from file at the top of this script. To associate station labels (`df2$DS.StationID`) with the corresponding strata, we call the `plyr::mapvalues()` function, and we store the results in a new column, `df2$Stratum`. Many individual monitoring stations are not grouped into a stratum, and in these cases, the `df2$DS.StationID` labels are retained in the new `Stratum` column. Subsequent checks confirm that each station is associated with only one strata (each stratum can be associated with one or more stations).
 ```{r}
 # Create new column grouping stations by stratum (not all 'strata' stations appear in 'df2')
-df2$Stratum <- mapvalues( x=df2$StationID, from=strata$STATIONID, to=strata$Stratum, warn_missing=FALSE )
+df2$Stratum <- mapvalues( x=df2$DS.StationID, from=strata$UNIQUEID, to=strata$Stratum, warn_missing=FALSE )
 ```
-Below, the for-loop prints the unique `StationID` values associated with each `Stratum` in `df2`. We also create a new vector `n.stations.in.strata` to count the number of stations associated with each stratum.
+Below, the for-loop prints the unique `DS.StationID` values associated with each `Stratum` in `df2`. We also create a new vector `n.stations.in.strata` to count the number of stations associated with each stratum.
 ```{r}
-# Check that StationID-to-stratum associations are one-to-one or many-to-one
-unique.strata <- unique( df2$Stratum )
+# Check that station-stratum associations are one-to-one or many-to-one
+unique.strata <- df2$Stratum %>% unique() %>% sort()
 n.stations.in.strata <- c()
 for( i in 1:length(unique.strata) ){
-  this.stations <- unique( df2$StationID[which(df2$Stratum==unique.strata[i])] )
-  if(length(this.stations)>1){ 
-    cat( paste0( unique.strata[i],'::: ',paste(this.stations,collapse='; ',sep=' '),'\n') )
+  this.stations <- unique( df2$DS.StationID[which(df2$Stratum==unique.strata[i])] )
+  if(length(this.stations)>1){
+    cat( paste0( 'Stratum ', unique.strata[i],'\n   ',paste(this.stations,collapse='\n   ',sep=' '),'\n') )
   }  # // end if()
-  n.stations.in.strata <- c( n.stations.in.strata, length(this.stations) )  # Confirm one or more stations per stratum
+  n.stations.in.strata <- c( n.stations.in.strata, length(this.stations) )
 }
 ```
-Printing the unique values of `n.stations.in.strata` indicates that each `Stratum` is associated with one or more `StationID` values.
-```{r}
-unique(n.stations.in.strata)  # Confirm one or more stations per stratum
-```
-And similarly, we loop over each unique `StationID` to track the number of strata associated with each station (`n.strata.in.stations`). The output confirms that there is only one stratum per station.
+Finally, we loop over each unique `DS.StationID` value to count the number of strata associated with each station (`n.strata.in.stations`). The output confirms that there is only one stratum per station.
 ```{r}
 # Check that there is no more than one stratum per station
-unique.stations <- unique( df2$StationID )
+unique.stations <- df2$DS.StationID %>% unique() %>% sort()
 n.strata.in.stations <- c()
 for( i in 1:length(unique.stations) ){
-  this.stratum <- unique( df2$Stratum[which(df2$StationID==unique.stations[i])] )
+  this.stratum <- unique( df2$Stratum[which(df2$DS.StationID==unique.stations[i])] )
   if(length(this.stratum)>1){
     cat( paste0( unique.stations[i],'::: ',paste(this.stratum,collapse='; ',sep=' '),'\n') )
   }  # // end if()
@@ -506,6 +507,7 @@ for( i in 1:length(unique.stations) ){
 }  # // end i loop
 unique(n.strata.in.stations)  # Confirm no more than one stratum per station
 ```
+There are `r length(unique(df2$DS.StationID))` unique `DS.StationID` labels and `r length(unique(df2$Stratum))` unique `Stratum` labels in `df2`.
 
 [top](#top)
 
