@@ -1,7 +1,7 @@
 ---
 title: "CHNEP Water Quality Data Cleaning"
 author: "Miles Medina PhD and Christine Angelini PhD, University of Florida Center for Coastal Solutions"
-date: "April 1, 2022"
+date: "August 2, 2022"
 output:
   html_document:
     theme: sandstone
@@ -39,7 +39,7 @@ editor_options:
 
 # Overview {#Overview}
   
-CHNEP contracted the UF Center for Coastal Solutions (CCS) to perform a water quality trend analysis and visualization for the CHNEP Water Atlas, which is maintained by USF. The first task of this project is to clean the water quality data. The data were originally collected by various agencies, compiled and processed by the USF Water Atlas team, and provided to CCS by USF for further cleaning. The period for trend analysis is 10 years, and as such the data cleaning procedure cleans the data from 2011 through 2020. This R Markdown report walks through the accompanying data cleaning script (R file) and its outputs. The script was implemented in R Version 4.1.0 (R Core Team, 2021).
+CHNEP contracted the UF Center for Coastal Solutions (CCS) to perform a water quality trend analysis and visualization for the CHNEP Water Atlas, which is maintained by USF. The first task of this project is to clean the water quality data. The data were originally collected by various agencies, compiled and processed by the USF Water Atlas team, and provided to CCS by USF for further cleaning. The period for trend analysis is 10 years, and as such the data cleaning procedure cleans the data from 2011 through 2020. This R Markdown report walks through the data cleaning procedure and was implemented in R Version 4.1.0 (R Core Team, 2021).
 
 The dataset provided to CCS reflects several data cleaning procedures performed by the USF Water Atlas team. These procedures are summarized below, and further detail can be found in the USF documentation.
 
@@ -51,12 +51,12 @@ The dataset provided to CCS reflects several data cleaning procedures performed 
   * Assigning the method detection limit (MDL) as the reported value for non-detect samples.
   * Discarding records with reported values outside of specified minimum and maximum values (thresholds).
 
-The data cleaning script implemented by CCS verifies the cleaning procedures listed above and applies additional procedures to enhance data quality. The major innovations/novelties associated with these procedures include
+The data cleaning script implemented herein verifies the cleaning procedures listed above and applies additional procedures. The major innovations/novelties associated with these procedures include
 
   * Standardizing and abbreviating analyte names.
   * Standardizing measurement units and sample depth units, and assigning units where they are missing.
   * Investigating qualifier codes used by each data source to ensure consistency.
-  * Implementation of functions for automated recognition of fatal qualifier codes and non-detect samples, even when the qualifier code string contains multiple characters.
+  * Implementating functions for automated recognition of fatal qualifier codes and non-detect samples, even when the qualifier code string contains multiple characters.
   * Standardizing MDLs and applying thoughtful rules for treating non-detect samples that are missing MDL information.
   * Specifying an expanded set of value thresholds, to screen unreliable data.
   
@@ -78,19 +78,16 @@ if(!require(data.table)) { install.packages('data.table') } ;  library(data.tabl
 Next, we load sample data, strata information, and qualifier code definitions from files provided by USF Water Atlas, as well as a file containing result value thresholds specified by CCS.
 ```{r}
 dat <- read.table('Trend Analysis - CHNEP - 2020 - Export.txt',sep="|",header=TRUE,quote="",fill=TRUE)
-strata <- read.csv('CHNEPstationstoGrids.csv')
+grid.strata <- read.csv('grid-strata-associations.csv')
+grid.stations <- read.csv("grid-station-associations.csv")
 code.defs <- read.csv('WA-Quality-Assurance-Code-Definitions_3_csv.csv')
 thresholds <- read.csv("thresholds.csv")
 ```
-The `dat` dataframe contains `r nrow(dat)` rows and `r ncol(dat)` columns, whose names are printed below.
+The `dat` dataframe contains `r prettyNum(nrow(dat),big.mark=",",scientific=FALSE)` rows of long-format water quality data (provided by the USF Water Atlas team) and `r ncol(dat)` columns. The column names are printed below.
 ```{r}
 colnames(dat)
 ```
-The `strata` dataframe associates individual sample locations (`STATIONID`) with a larger sampling area (`Stratum`). Below, the first six `strata` records are displayed.
-```{r}
-head(strata)
-```
-The `code.defs` and `thresholds` files are described later in the script.
+The `grid.strata`, `grid.stations`, `code.defs`, and `thresholds` dataframes are described later in the script.
 
 [top](#top)
 
@@ -104,7 +101,7 @@ df$DataSource <- df$DataSource %>% as.factor()
 df$StationID  <- df$StationID %>% as.factor()
 df$Activity_Type <- df$Activity_Type %>% as.factor()
 df$Activity_Start_Date <- df$Activity_Start_Date %>% as.Date(format="%Y-%m-%d")
-df$RelativeDepth       <- df$RelativeDepth %>% as.factor()
+df$RelativeDepth <- df$RelativeDepth %>% as.factor()
 df$Characteristic <- df$Characteristic %>% as.factor()
 df$Result_Unit <- df$Result_Unit %>% as.factor()
 df$Activity_Depth_Unit <- df$Activity_Depth_Unit %>% as.factor()
@@ -115,7 +112,7 @@ df$Activity_Depth_Unit <- df$Activity_Depth_Unit %>% as.factor()
 
 # Subset data by date {#Dates}
 
-The trend analysis (Task 2 of this project) will use 10 years of sample data from 2011 through 2020. Below, we subset the data in `df` by date, store this subset as a new dataframe `df1`, and rename the `Activity_Start_Date` column to `Date`.
+The trend analysis will use 10 years of sample data from 2011 through 2020. Below, we subset the data in `df` by date, store this subset as a new dataframe `df1`, and rename the `Activity_Start_Date` column to `Date`.
 ```{r}
 min.date <- as.Date('2011-01-01')
 max.date <- as.Date('2020-12-31')
@@ -184,11 +181,16 @@ unique(df1$Characteristic) %>% sort()
 
 # Abbreviate analyte names {#Analytes}
 
-In a new `Analyte` column, we specify abbreviated analyte names (e.g. TN) corresponding to labels in the `Characteristic` column. We call the `plyr::mapvalues()` function to handle the assignment of the abbreviated `Analyte` names. The abbreviated names will make it easier to refer to analytes later in this script, and they can be used to label plot axes. 
+In a new `Analyte` column, we will abbreviate the analyte labels in the `Characteristic` column.  The abbreviated labels will make it easier to refer to analytes later in this script, and they can be used to label plot axes.
+First, we specify the abbreviated labels and confirm that the `analytes.old` and `analytes.new` vectors are lined up properly:
 ```{r}
 analytes.old <- levels(df1$Characteristic)
 analytes.new <- c( 'Color', 'BOD', 'Chl-a', 'DO Conc', 'DO Sat',  'Fecal', 'TN',  'NH4',  'TKN',
                    'NOx',   'pH',   'TP',   'PO4',     'Sp Cond', 'Temp',  'TSS', 'Turbidity'     )
+cbind( analytes.old, analytes.new )
+```
+Next, we call the `plyr::mapvalues()` function to assign the abbreviated `Analyte` labels.
+```{r}
 df1$Analyte <- mapvalues( df1$Characteristic, analytes.old, analytes.new ) 
 analytes <- unique( df1$Analyte ) %>% sort() %>% as.character()
 analytes
@@ -429,7 +431,7 @@ surface.idx <- which( df1$Depth<=1 |   # reported depth no more than one meter, 
 df1.nonsurface <- df1[ -surface.idx, ]
 df1 <- df1[ surface.idx, ]
 ```
-A total of `r nrow(df1.nonsurface)` non-surface records are discarded. Below, we explore the `df1.nonsurface` dataframe, which contains all records discarded as non-surface samples, to ensure that no records are unnecessarily discarded. Although some "Surface" records were discarded, as indicated below, the associated `Depth` values exceed 1 m.
+A total of `r prettyNum(nrow(df1.nonsurface),big.mark=",",scientific=FALSE)` non-surface records are discarded. Below, we explore the `df1.nonsurface` dataframe, which contains all records discarded as non-surface samples, to ensure that no records are unnecessarily discarded. Although some "Surface" records were discarded, as indicated below, the associated `Depth` values exceed 1 m.
 ```{r}
 df1.nonsurface %>% nrow()  # 81k total records
 df1.nonsurface[ which(df1.nonsurface$Depth<=1), ] %>% nrow()  # zero records with Depth<=1
@@ -470,36 +472,77 @@ We start by capitalizing all station names (`StationID`) to remove any inconsist
 ```{r}
 df2$StationID <- toupper( df2$StationID )
 ```
-Because the water quality data were provided from various agencies (`DataSource`), it is possible that the `StationID` labels are not geographically unique. That is, two data providers may use the same `StationID` to refer to different real-world sample locations. To resolve this issue, we create unique station labels by concatenating the data source (`DataSource`) and station (`StationID`) information and store the unique labels in a new column, `DS.StationID`. And to illustrate, we print the first six unique labels.
+Because the water quality data were obtained from various sources (`DataSource`), it is possible that some `StationID` labels are not geographically unique. That is, two data providers may use the same `StationID` label to refer to different real-world sample locations. For instance, Lee County and Cape Coral each provide data from a Station 160, but these actually refer to two distinct locations.
 ```{r}
-df2$DS.StationID <- paste( df2$DataSource, ":", df2$StationID )
-df2$DS.StationID %>% unique() %>% head()
+df2$DataSource[ which(df2$StationID=='160') ] %>% unique()
 ```
-Some monitoring stations are treated as a group, or stratum, and the station-stratum associations are provided in the `strata` dataframe loaded from file at the top of this script. To associate station labels (`df2$DS.StationID`) with the corresponding strata, we call the `plyr::mapvalues()` function, and we store the results in a new column, `df2$Stratum`. Many individual monitoring stations are not grouped into a stratum, and in these cases, the `df2$DS.StationID` labels are retained in the new `Stratum` column. Subsequent checks confirm that each station is associated with only one strata (each stratum can be associated with one or more stations).
+To resolve this issue, we will create unique station labels by concatenating information about data providers and stations (`DataSource` and `StationID`). Below, we print the unique `DataSource` labels.
 ```{r}
-# Create new column grouping stations by stratum (not all 'strata' stations appear in 'df2')
-df2$Stratum <- mapvalues( x=df2$DS.StationID, from=strata$UNIQUEID, to=strata$Stratum, warn_missing=FALSE )
+df2$DataSource %>% unique() %>% sort()
 ```
-Below, the for-loop prints the unique `DS.StationID` values associated with each `Stratum` in `df2`. We also create a new vector `n.stations.in.strata` to count the number of stations associated with each stratum.
+We note that several `DataSource` labels indicate both the source database and the data provider. For instance, `WIN_CAPECRD` and `STORET_CAPECRD` both refer to Cape Coral (CAPECRD) as the data provider, even though the data are split between the two FDEP databases: WIN and STORET. For our purposes (i.e., creating unique station labels), we want data from each provider to be treated the same.
+We create a new column, `DataProvider`, containing only the data provider component of each `DataSource` by calling `sub()` to remove `WIN_` and `STORET_` from all `DataSource` strings.
+```{r}
+df2$DataProvider <- df2$DataSource
+df2$DataProvider <- sub( "WIN_", "", df2$DataProvider ) # Remove 'WIN' prefix
+df2$DataProvider <- sub( "STORET_", "", df2$DataProvider ) # Remove 'STORET' prefix
+```
+The result is a shorter list of data providers.
+```{r}
+df2$DataProvider %>% unique() %>% sort()
+```
+Next, we create unique station labels in a new column, `Unique.StationID`, by concatenating `DataProvider` and `StationID` values.
+```{r}
+df2$Unique.StationID <- paste0( df2$DataProvider, ": ", df2$StationID )
+df2$Unique.StationID %>% unique() %>% head()
+```
+Monitoring within 13 open-water estuarine areas was conducted according to a spatially stratified random sampling design: Each "stratum" comprises a set of one-square-mile grid cells, and during each sampling event, samples are collected from randomly selected grid cells within each stratum. The data collected from grid cells within each stratum are considered representative of the stratum and should therefore be analyzed together.
+
+Records in this dataset associated with the stratified sampling design were provided by `LEE_WQ`, `SARASOTAES_WQ`, and `CHNEPMP`. Other data from the Southwest Florida Water Management District (`FL21SWFD`) are also associated with the stratified sampling design, but those data were not included as part of this dataset and are therefore cleaned and processed separately in accompanying R Markdown documents. Associations between `Station ID` values, strata grid cell numbers, and strata names are contained in the `grid.stations` and `grid.strata` dataframes loaded from file at the top of this script.
+
+We create a new `Stratum.Grid` column and assign the grid numbers corresponding to the appropriate `StationID` values by calling `plyr::mapvalues()` and using the `grid.stations` dataframe.
+```{r}
+grid.idx <- which( (df2$DataProvider %in% c('LEE_WQ','SARASOTAES_WQ','CHNEPMP')) &
+                   (df2$StationID %in% grid.stations$Station) )
+df2$Stratum.Grid <- NA  # initialize new column
+df2$Stratum.Grid[ grid.idx ] <- mapvalues( x = df2$StationID[ grid.idx ], # map stations to grids
+                                           from = grid.stations$Station,
+                                           to = grid.stations$Grid,
+                                           warn_missing = FALSE )
+```
+As expected, we find that non-`NA` entries in the new `Stratrum.Grid` column are associated with three data providers: `LEE_WQ`, `SARASOTAES_WQ`, and `CHNEPMP`.
+```{r}
+df2$DataProvider[ which(!is.na(df2$Stratum.Grid)) ] %>% unique()
+```
+Next, we map the grid cell numbers (`Stratum.Grid`) to the strata names in a new column, `Stratum`, using the `grid.strata` dataframe.
+```{r}
+df2$Stratum <- mapvalues( x = df2$Stratum.Grid,
+                          from = grid.strata$Grid,
+                          to = grid.strata$Stratum,
+                          warn_missing = FALSE )
+```
+Below, the for-loop prints the `Unique.StationID` labels associated with each `Stratum`. We also create a new vector `n.stations.in.strata` to count the number of stations associated with each stratum.
 ```{r}
 # Check that station-stratum associations are one-to-one or many-to-one
 unique.strata <- df2$Stratum %>% unique() %>% sort()
 n.stations.in.strata <- c()
 for( i in 1:length(unique.strata) ){
-  this.stations <- unique( df2$DS.StationID[which(df2$Stratum==unique.strata[i])] )
+  this.stations <- unique( df2$Unique.StationID[which(df2$Stratum==unique.strata[i])] )
   if(length(this.stations)>1){
-    cat( paste0( 'Stratum ', unique.strata[i],'\n   ',paste(this.stations,collapse='\n   ',sep=' '),'\n') )
+    cat( paste0( unique.strata[i],'\n   ',paste(this.stations,collapse='\n   ',sep=' '),'\n') )
   }  # // end if()
   n.stations.in.strata <- c( n.stations.in.strata, length(this.stations) )
 }
+names(n.stations.in.strata) <- unique.strata
+n.stations.in.strata
 ```
-Finally, we loop over each unique `DS.StationID` value to count the number of strata associated with each station (`n.strata.in.stations`). The output confirms that there is only one stratum per station.
+Finally, we loop over each `Unique.StationID` label to count the number of strata associated with each station (`n.strata.in.stations`). The output confirms that there is only one stratum per station.
 ```{r}
 # Check that there is no more than one stratum per station
-unique.stations <- df2$DS.StationID %>% unique() %>% sort()
+unique.stations <- df2$Unique.StationID %>% unique() %>% sort()
 n.strata.in.stations <- c()
 for( i in 1:length(unique.stations) ){
-  this.stratum <- unique( df2$Stratum[which(df2$DS.StationID==unique.stations[i])] )
+  this.stratum <- unique( df2$Stratum[which(df2$Unique.StationID==unique.stations[i])] )
   if(length(this.stratum)>1){
     cat( paste0( unique.stations[i],'::: ',paste(this.stratum,collapse='; ',sep=' '),'\n') )
   }  # // end if()
@@ -507,7 +550,18 @@ for( i in 1:length(unique.stations) ){
 }  # // end i loop
 unique(n.strata.in.stations)  # Confirm no more than one stratum per station
 ```
-There are `r length(unique(df2$DS.StationID))` unique `DS.StationID` labels and `r length(unique(df2$Stratum))` unique `Stratum` labels in `df2`.
+Finally, we overwrite `Unique.StationID` labels associated with strata with the corresponding `Stratum` label. This change will allow us to use the `Unique.StationID` column to identify distinct locations (stations or strata) for trend analysis.
+```{r}
+df2$Unique.StationID[ grid.idx ] <- df2$Stratum[ grid.idx ]
+```
+We verify that the `Unique.StationID` labels were properly overwritten with a couple of logical tests and by printing 20 random rows from `df2`:
+```{r}
+any( df2$Unique.StationID[-grid.idx] %in% unique.strata ) # confirm no non-strata stations were labeled as strata (FALSE)
+all( df2$Unique.StationID[grid.idx] %in% unique.strata ) # confirm all strata grids were labeled as strata (TRUE)
+set.seed(8675309)
+df2[ grid.idx[sample(1:length(grid.idx),20)], c('Date','Unique.StationID','Stratum') ]
+```
+The `df2` dataframe contains data from `r length(na.omit(unique(df2$Stratum)))` strata and from `r length(unique(df2$Unique.StationID[ which(is.na(df2$Stratum)) ]))` unique stations that are not associated with strata. Data from other strata (provided by SFWMD via the WIN and STORET databases) are cleaned and processed in accompanying R Markdown documents.
 
 [top](#top)
 
@@ -826,7 +880,7 @@ Next, we screen records with `Result_Value`s that fall outside the specified thr
       threshold.screening$n.removals[i] <- length(outside.idx)
     }  # // end i loop
     # Write summary to file
-    write.csv(threshold.screening,"threshold.results.csv",row.names=FALSE)
+    write.csv(threshold.screening,"threshold.results.CHNEP.csv",row.names=FALSE)
 ```
 Below, we print `threshold.screening`, which reports the number of records discarded for each analyte. In total, `r sum(threshold.screening$n.removals)` records were discarded.
 ```{r}
@@ -853,10 +907,10 @@ for( i in 1:length(analytes) ){
 
 # Export clean data {#Export}
 
-We export the clean dataset (`df3`), which contains `r nrow(df3)` rows. We save the data to a csv file and an RData file.
+We export the clean dataset (`df3`), which contains `r prettyNum(nrow(df3),big.mark=",",scientific=FALSE)` rows. We save the data to a csv file and an RData file.
 ```{r}
-write.csv( df3, "CHNEP-WQ_clean-data_2011-2020.csv", row.names=FALSE )
-save( df3, file="CHNEP-WQ_clean-data_2011-2020.RData" )
+write.csv( df3, "clean-data_CHNEP-WA-WQ_2011-2020.csv", row.names=FALSE )
+save( df3, file="clean-data_CHNEP-WA-WQ_2011-2020.RData" )
 ```
 
 [top](#top)

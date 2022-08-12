@@ -1,0 +1,468 @@
+---
+title: "SWFWMD (STORET) Water Quality Data Cleaning"
+author: "Miles Medina PhD and Christine Angelini PhD, University of Florida Center for Coastal Solutions"
+date: "Aug 2, 2022"
+output:
+  html_document:
+    theme: sandstone
+    highlight: haddock
+editor_options: 
+  chunk_output_type: console
+---
+
+# Contents {#top}
+
+  * [Overview](#Overview)
+  * [Load R libraries and data](#Load)
+  * [Specify data classes](#Classes)
+  * [Subset data by date](#Dates)
+  * [Clean up factor levels and redundancies](#Factors)
+  * [Abbreviate analyte names](#Analytes)
+  * [Standardize measurement units](#Units)
+  * [Remove field blanks and equipment blanks](#Blanks)
+  * [Standardize sample depth units](#DepthUnits)
+  * [Subset surface sample data](#Depths)
+  * [Remove duplicate records](#Dupes)
+  * [Open-water monitoring strata](#Strata)
+  * [Remove records flagged with fatal qualifier codes](#Qualifiers)
+  * [Detection limits and non-detects](#MDL)
+  * [Apply thresholds to result values](#Thresholds)
+  * [Export clean data](#Export)
+  * [References](#Refs)
+  
+
+# Overview {#Overview}
+  
+Water quality data provided by CHNEP for the water quality trends project left out data collected at open-water strata locations and provided by the Southwest Florida Water Management District (SWFWMD). This markdown document details data cleaning procedures for data downloaded from FDEP's STORET database on August 2, 2022 using following search criteria:
+
+  * Organization ID: 21FLSWFD
+  * WBID: 1983A, 1983B, 2075B, 2056A, 2056B, 2065A, 2065B, 2065C, 2065D, 1991A
+  * Dates: 2020-01-01 -- 2022-08-02
+  * Characteristics: All biological, field, and nutrient categories
+
+Data cleaning procedures described below follow the procedure developed for the CHNEP-provided dataset, and the script was implemented in R Version 4.1.0 (R Core Team, 2021).
+
+[top](#top)
+
+
+# Load R libraries and data {#Load}
+
+First, we clear the global R environment and load libraries: `plyr` (Wickham, 2011), `dplyr` (Wickham et al., 2021), `tidyr` (Wickham, 2021), and `data.table` (Dowle & Srinivasan, 2021). The code automatically installs the packages if they are not already stored locally.
+```{r message=FALSE, warning=FALSE}
+rm(list=ls(all=TRUE)) 
+if(!require(plyr)) { install.packages('plyr') } ;  library(plyr)
+if(!require(dplyr)) { install.packages('dplyr') } ;  library(dplyr)  
+if(!require(tidyr)) { install.packages('tidyr') } ;  library(tidyr) 
+if(!require(data.table)) { install.packages('data.table') } ;  library(data.table)
+```
+Next, we load sample data, strata information, and value thresholds from file.
+```{r}
+dat <- read.table('STORET_Water_Quality_Results.txt',sep="|",header=TRUE,fill=TRUE)
+grid.strata <- read.csv('grid-strata-associations.csv')
+grid.stations <- read.csv("grid-station-associations.csv")
+thresholds <- read.csv("thresholds.csv")
+```
+The `dat` dataframe contains `r nrow(dat)` rows and `r ncol(dat)` columns, whose names are printed below.
+```{r}
+colnames(dat)
+```
+The `grid.strata` and `grid.stations` files specify associations between the strata, their constituent grid cells, and associated station names. The `thresholds` file contains thresholds for measured values to help us identify unreliable data.
+
+[top](#top)
+
+
+# Specify data classes {#Classes}
+
+Next, we store the `dat` dataframe as a new dataframe object `df` and specify the type (class) of data in some of the columns. 
+```{r}
+df <- dat
+df$Station.ID  <- df$Station.ID %>% as.factor()
+df$Act.Type <- df$Act.Type %>% as.factor()
+df$Act.Date <- df$Act.Date %>% as.Date(format="%m/%d/%Y")
+df$Characteristic <- df$Characteristic %>% as.factor()
+df$Result.Value <- df$Result.Value %>% as.numeric()  # "*Non-detect" coerced to NA
+```
+
+[top](#top)
+
+
+# Subset data by date {#Dates}
+
+The trend analysis will use 10 years of sample data from 2011 through 2020. Below, we subset the data in `df` by date, store this subset as a new dataframe `df1`, and rename the `Act.Date` column to `Date`.
+```{r}
+min.date <- as.Date('2011-01-01')
+max.date <- as.Date('2020-12-31')
+df1 <- df[ which( df$Act.Date >= min.date & df$Act.Date <= max.date) ,]
+colnames(df1)[which(colnames(df1)=='Act.Date')] <- 'Date'
+```
+We note that these data do not span the full 2011--2020 period, because the STORET database contains data through 2015. More recent data are available in FDEP's WIN database.
+```{r}
+range( df1$Date )
+```
+
+[top](#top)
+
+
+# Clean up factor levels and redundancies {#Factors}
+
+Subsetting the data by date potentially removed instances of some factor levels from `factor` columns of `df1`. In this section, we check for redundancies in each `factor` column and remove any unused factor levels.
+  
+First, we explore the `Station.ID` column, which contains `r length(unique(df1$Station.ID))` unique values. The logical test below indicates that the number of factor levels is not equal to the actual number of unique values that appear in the column, so we remove unused factor levels by calling `droplevels()`.
+```{r}
+length(levels(df1$Station.ID)) == length(unique(df1$Station.ID))
+df1$Station.ID <- droplevels(df1$Station.ID)
+```
+Likewise, we check the `Act.Type` and `Characteristic` columns, which do not show unused factor levels.
+```{r}
+length(levels(df1$Act.Type)) == length(unique(df1$Act.Type))
+```
+```{r}
+length(levels(df1$Characteristic)) == length(unique(df1$Characteristic))
+```
+Next, we check the `Depth.Units` column. The sampling depths are consistently reported in meters.
+```{r}
+unique(df1$Depth.Units) %>% as.character()
+```
+The `Characteristic` column indicates the analyte associated with each record, and we see no redundancies in the analyte names.
+```{r}
+unique(df1$Characteristic) %>% sort()
+```
+However, we notice that a few analytes appearing in the CHNEP dataset do not appear in the STORET dataset (DO saturation, fecal coliform, and biological oxygen demand). In addition, several analytes appear in the STORET dataset that will not be part of our trend analysis (e.g., organic carbon, Secchi depth). Later, records associated with these superfluous analytes will be removed.
+
+
+[top](#top)
+
+
+# Abbreviate analyte names {#Analytes}
+
+In a new `Analyte` column, we will abbreviate the analyte labels in the `Characteristic` column.  The abbreviated labels will make it easier to refer to analytes later in this script, and they can be used to label plot axes.
+First, we specify the abbreviated labels and confirm that the `analytes.old` and `analytes.new` vectors are lined up properly:
+```{r}
+analytes.old <- levels(df1$Characteristic)
+analytes.new <- c( 'Chl-a', NA, NA, 'DO Conc', 'NH4', 'TKN', 'TN', 'NOx', 'pH',
+                   'TP', 'PO4', NA, NA, 'Sp Cond', 'Temp', NA, 'TSS', 'Color', 'Turbidity' )
+cbind( analytes.old, analytes.new )
+```
+Next, we call the `plyr::mapvalues()` function to assign the abbreviated `Analyte` labels.
+```{r}
+df1$Analyte <- mapvalues( df1$Characteristic, analytes.old, analytes.new ) 
+analytes <- unique( df1$Analyte ) %>% sort() %>% as.character()
+analytes
+```
+Next, we remove `r length(which(is.na(df1$Analyte)))` records associated with superfluous analytes.
+```{r}
+df1 <- df1[ -which(is.na(df1$Analyte)), ]
+```
+Below, we display selected columns from a random set of five records in `df1`. Note that the `Characteristic` labels correspond to the abbreviated `Analyte` labels.
+```{r}
+set.seed(716241)
+df1[sample(1:nrow(df1),5),c('Date','Characteristic','Analyte','Result.Value')]
+```
+
+[top](#top)
+
+
+# Standardize measurement units {#Units}
+
+We explore measurement units to ensure consistency across analytes and with the CHNEP dataset. We start by printing the unique values in the `Result.Units` column. We see expected measurement units but notice that in some cases, the `Result.Units` field is blank (`""`).
+```{r}
+unique(df1$Result.Units)
+```
+Next, we print the units associated with each analyte. Each line of the output lists an analyte and an associated unit in the `Result.Units` column; analytes associated with multiple `Result.Units` values appear on multiple lines. Below, each analyte is associated with a single measurement unit, but the output indicates that some records for several analytes are missing units (`""`).
+```{r}
+for( i in 1:length(levels(df1$Analyte)) ){
+  this.analyte <- levels(df1$Analyte)[i]
+  this.units   <- unique( df1$Result.Units[which(df1$Analyte==this.analyte)] )
+  cat( paste0( this.analyte, ' -- ', this.units, '\n' ) )
+} 
+```
+Upon examining records with missing measurement units, we find that these are non-detects, with `NA` in the `Result.Value` column. Further, none of the records with a measured value reported (`Result.Value`) are missing units (`Result.Units`). Later, we will assign measurement values and units to the non-detect records.
+```{r}
+ df1$Result.Value[ which( df1$Result.Units=="") ] %>% unique()
+ any( df1$Result.Unit[which(!is.na(df1$Result.Value))]=="" )
+```
+For consistency with the CHNEP dataset, we convert/re-label the units for NH4, NOx, TN, TKN, PO4, and TP from "mg/l" to "ug/l"; pH from "SU" to "pH"; Sp Cond from "uS/cm" to "umho"; and Temp from "deg C" to "deg F".
+```{r}
+# Nutrients (mg/l to ug/l)
+df1$Result.Value[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ] <- df1$Result.Value[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ]*1000
+df1$Result.Units[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ]  <- 'ug/l'
+# pH
+df1$Result.Units[ which(df1$Analyte=='pH' ) ]  <- 'pH'
+# Sp Cond
+df1$Result.Units[ which(df1$Analyte=='Sp Cond') ]  <- 'umho'
+# Temp
+df1$Result.Value[ which(df1$Analyte=='Temp') ] <- df1$Result.Value[ which(df1$Analyte=='Temp') ]*1.8+32
+df1$Result.Units[ which(df1$Analyte=='Temp') ]  <- 'deg F'
+```
+Next, we repeat the procedure above for the `MDL` and `MDL.units`, which indicate detection limits for non-detect records. Printing the MDL units associated with each analyte indicates that several should be converted for consistency with `Result.Units`.
+```{r}
+for( i in 1:length(levels(df1$Analyte)) ){
+  this.analyte <- levels(df1$Analyte)[i]
+  this.units   <- unique( df1$MDL.Units[which(df1$Analyte==this.analyte)] )
+  cat( paste0( this.analyte, ' -- ', this.units, '\n' ) )
+} 
+```
+As above, we convert/re-label MDL values and units:
+```{r}
+# Nutrients (mg/l to ug/l)
+df1$MDL[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ] <- df1$MDL[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ]*1000
+df1$MDL.Units[ which(df1$Analyte %in% c('NH4','NOx','TN','TKN','PO4','TP') ) ]  <- 'ug/l'
+# pH
+df1$MDL.Units[ which(df1$Analyte=='pH' ) ]  <- 'pH'
+# Sp Cond
+df1$MDL.Units[ which(df1$Analyte=='Sp Cond') ]  <- 'umho'
+# Temp
+df1$MDL[ which(df1$Analyte=='Temp') ] <- df1$MDL[ which(df1$Analyte=='Temp') ]*1.8+32
+df1$MDL.Units[ which(df1$Analyte=='Temp') ]  <- 'deg F'
+```
+
+[top](#top)
+
+
+# Remove field blanks and equipment blanks {#Blanks}
+
+The dataset does not include any field blanks or equipment blanks (`Act.Type` column).
+```{r}
+unique(df1$Act.Type) %>% sort()
+```
+
+[top](#top)
+
+
+# Standardize sample depth units {#DepthUnits}
+
+The `Act.Depth` and `Depth.Units` columns indicate the depths at which samples were collected. Sample depths are consistently expressed in meters in this dataset, and there are no missing depth values:
+```{r}
+unique(df1$Depth.Units) %>% as.character()
+any(is.na(df1$Act.Depth))
+```
+
+[top](#top)
+
+
+# Subset surface sample data {#Depths}
+
+The trend analysis will consider only surface sample data. Samples are considered to be from the surface if the `Act.Depth` value is 1 meter or less.
+  
+We subset the data for surface samples and thereby discard `r length(which(df1$Act.Depth>1))` records:
+```{r}
+df1 <- df1[ -which( df1$Act.Depth > 1 ), ]
+```
+
+[top](#top)
+
+
+# Remove duplicate records {#Dupes}
+
+We call the function `duplicated()` to search for duplicate records in `df1` and find `r length(which(duplicated(df1)))` duplicate records.
+```{r}
+any(duplicated(df1))
+```
+
+[top](#top)
+
+
+# Open-water monitoring strata {#Strata}
+
+The `Station.ID` column indicates the monitoring station where each sample was collected. We start by printing all unique location values and observe that all the labels are numerical.
+```{r}
+df1$Station.ID %>% unique() %>% sort()
+```
+Further, we see that all of these monitoring locations correspond to strata grid cells.
+```{r}
+all( unique(df1$Station.ID) %in% grid.stations$Station[which(grid.stations$Agency=="SWFWMD")] )
+```
+Next, we create a new `Stratum.Grid` column and assign the grid cell number corresponding to each `Station.ID`, using the `grid.stations` dataframe. 
+```{r}
+df1$Stratum.Grid <- mapvalues( x = df1$Station.ID,
+                              from = grid.stations$Station[ which(grid.stations$Agency=="SWFWMD") ],
+                              to = grid.stations$Grid[ which(grid.stations$Agency=="SWFWMD" )],
+                              warn_missing = FALSE )
+```
+As expected, all `Station.ID` found a matching grid cell number.
+```{r}
+any(is.na(df1$Stratum.Grid))
+```
+Finally, we create a new `Stratum` column to contain the stratum name associated with each grid cell, using the `grid.strata` dataframe.
+```{r}
+df1$Stratum <- mapvalues( x = df1$Stratum.Grid,
+                          from = grid.strata$Grid,
+                          to = grid.strata$Stratum,
+                          warn_missing = FALSE )
+```
+And, as expected, all `Stratum.Grid` numbers found a matching stratum.
+```{r}
+any(is.na(df1$Stratum))
+```
+Below, we print a random sample of 10 stations, grids, and strata.
+```{r}
+set.seed(34618)
+df1[ sample(1:nrow(df1),10), c("Station.ID","Stratum.Grid","Stratum") ]
+```
+
+[top](#top)
+
+
+# Remove records flagged with fatal qualifier codes {#Qualifiers}
+
+Fatal qualifier codes indicate unreliable data that should not be used for analysis. First, we print all unique qualifier codes (`VQ` column) found in `df1`, and we see several fatal qualifier codes.
+```{r}
+df1$VQ %>% unique() %>% sort()
+```
+We remove records flagged with fatal qualifier code by specifying a vector of fatal codes (`invalid.codes`) and defining a `find.invalid()` function to identify fatally flagged records. Because each `VQ` string may contain multiple characters, the function parses each string into single characters and checks for matches against the specified `invalid.codes`.
+```{r}
+invalid.codes <- c("*","?","A","B","G","H","J","K","L","N","O","Q","T","V","Y","Z")
+find.invalid <- function( QUALIFIER, INVALID=invalid.codes ){  # QUALIFER arg is a character string
+  input.code <- QUALIFIER %>% strsplit(split='') %>% unlist() # parse the string into single characters
+  invalid <- input.code %in% INVALID %>% any()  # check if any input characters match INVALID
+  return( invalid )  # return TRUE or FALSE
+}
+```
+We apply `find.invalid()` to identify row indices containing fatal codes, remove these records, and store the result in a new dataframe `df2`.
+```{r}
+invalid.rows <- apply( matrix(df1$VQ,ncol=1), 1, find.invalid ) %>% which()
+if( length(invalid.rows)>0 ){
+  df2 <- df1[ -invalid.rows, ] 
+} else {  
+  df2 <- df1
+} 
+df2$VQ <- df2$VQ %>% as.factor()
+```
+A total of `r length(invalid.rows)` fatally flagged records are removed from the dataset. The remaining qualifier codes appearing in `df2` are printed below.
+```{r}
+df2$VQ %>% unique() %>% as.character()
+```
+
+[top](#top)
+
+
+# Detection limits and non-detects {#MDL}
+
+We identify all non-detect records and label them in a new `logical` column: `Non_detect`. Because qualifier code strings may contain multiple characters, we define a function, `find.U()`, that determines whether a "U" appears in a qualifier code string. For instance, the function will return `TRUE` for "U", "u", and "UI" and `FALSE` for "P", "I", and "IC".
+```{r}
+# Define function to find records flagged with 'U'
+find.U <- function( QUALIFIER, CODE='U' ){  # QUALIFER argument is a character string
+  QUALIFIER <- toupper(QUALIFIER)  # capitalize the input
+  input.code <- QUALIFIER %>% strsplit(split='') %>%
+                           unlist()  # parse the qualifier string into single characters
+  u.code <- input.code %in% CODE %>% any()  # check if any input characters contain U
+  return( u.code )  # return TRUE or FALSE
+}  #  // end find.U() function
+# Apply find.U() and store results in new column
+df2$Non_detect <- apply( matrix(df2$VQ,ncol=1), 1, find.U )
+```
+We query `df2` to check whether there are any MDL values missing among non-detect records, and we find that MDL values are provided for all non-detect records.
+```{r}
+any( is.na(df2$MDL) & df2$Non_detect==TRUE )
+```
+Next, we assign the `MDL` as the `Result.Value` for all non-detects.
+```{r}
+df2$Result.Value[ which(df2$Non_detect==TRUE) ] <- df2$MDL[ which(df2$Non_detect==TRUE) ]
+df2$Result.Units[ which(df2$Non_detect==TRUE) ] <- df2$MDL.Units[ which(df2$Non_detect==TRUE) ]
+```
+Finally, we confirm that the `Result.Value`s for each `Analyte` are reported in a single measurement unit, and we coerce `Result.Value` to the `factor` class.
+```{r}
+for( i in 1:length(levels(df2$Analyte)) ){
+  this.analyte <- levels(df2$Analyte)[i]
+  this.units   <- unique( df2$Result.Units[which(df2$Analyte==this.analyte)] )
+  cat( paste0( this.analyte, ' -- ', this.units, '\n' ) )
+} 
+df2$Result.Units <- df2$Result.Units %>% as.factor()
+```
+
+[top](#top)
+
+
+# Apply thresholds to result values {#Thresholds}
+
+We explore the data distributions for each analyte to identify suspect values, and we discard values outside specified minimum and maximum thresholds.
+
+We begin by visualizing the data distributions for each analyte. The minimum and maximum reported values (`Result.Value`) are printed near the top right corner of each histogram.
+```{r fig.width=10, fig.height=8}
+par(mfrow=c(3,3))
+for( i in 1:length(analytes) ){
+  this.analyte <- analytes[i]
+  this.unit    <- unique( df2$Result.Value[ which(df2$Analyte==this.analyte) ] )
+  hist( df2$Result.Value[ which(df2$Analyte==this.analyte) ], breaks=50,
+        border=rgb(1,1,1,1), col=rgb(0,0.2,0.9,1),
+        main=this.analyte, xlab=this.unit
+        )
+  legend('topright',bty='n',legend=range(df2$Result.Value[which(df2$Analyte==this.analyte)]))
+}
+```
+The threshold values are stored in the `thresholds.csv` file, which was loaded as the `threshold` dataframe at the top of this script and is printed below. The `low` and `high` columns contain the threshold values for each analyte. Specification of thresholds was informed by the distributions of the data provided by CHNEP and by domain knowledge. For several analytes, no maximum threshold is specified, to avoid discarding unusually large albeit plausible reported values. 
+```{r}
+thresholds[,c('analyte','low','high','unit')]
+```
+Next, we screen records with `Result.Value` values that fall outside the specified thresholds. We initialize a new `threshold.screening` dataframe to keep track of the number of discarded records, loop over each analyte to identify and discard values outside the thresholds, and write `threshold.screening` to file as `threshold.results.csv`. 
+```{r}
+    threshold.screening <- data.frame( analyte=analytes, n.removals=NA )
+    # Loop over analytes and screen out data outside of specified thresholds
+    for( i in 1:length(analytes) ){
+      # Verify threshold units match data units
+      this.unit <- unique(df2$Result.Units[which(df2$Analyte==analytes[i])])
+      t.idx <- which(thresholds$analyte==analytes[i])
+      if( thresholds$unit[t.idx] != this.unit ){
+        stop(paste("Threshold unit doesn't match data (",analytes[i],")."))
+        } # // end if()
+      # Remove data outside of specified thresholds
+      outside.idx <- which( df2$Analyte==analytes[i] &
+                            (df2$Result.Value<thresholds$low[t.idx] |
+                             df2$Result.Value>thresholds$high[t.idx]) )
+      if( length(outside.idx)>0 ){
+        df2 <- df2[-outside.idx,]
+      }  # // end if()
+      # Add summary entry
+      threshold.screening$n.removals[i] <- length(outside.idx)
+    }  # // end i loop
+    # Write summary to file
+    write.csv(threshold.screening,"threshold.results.STORET.csv",row.names=FALSE)
+```
+Below, we print `threshold.screening`, which reports the number of records discarded for each analyte. In total, `r sum(threshold.screening$n.removals)` records were discarded.
+```{r}
+threshold.screening
+```
+Finally, we re-run the plotting loop above to visualize the data distributions following the threshold screening. Comparing the two sets of histograms, we observe that the distributions for the affected analytes have changed.
+```{r fig.width=10, fig.height=8}
+par(mfrow=c(3,3))
+for( i in 1:length(analytes) ){
+  this.analyte <- analytes[i]
+  this.unit    <- unique( df2$Result.Units[ which(df2$Analyte==this.analyte) ] )
+  if(this.unit[1]=="None"){ this.unit<-'' }
+  hist( df2$Result.Value[ which(df2$Analyte==this.analyte) ], breaks=50,
+        border=rgb(1,1,1,1), col=rgb(0.9,0.2,0,1),
+        main=this.analyte, xlab=this.unit
+        )
+  legend('topright',bty='n',legend=range(df2$Result.Value[which(df2$Analyte==this.analyte)]))
+}
+```
+
+[top](#top)
+
+
+# Export clean data {#Export}
+
+We export the clean dataset (`df2`), which contains `r nrow(df2)` rows. We save the data to a csv file and an RData file.
+```{r}
+write.csv( df2, "clean-data_SWFWMD-STORET-WQ_2011-2020.csv", row.names=FALSE )
+save( df2, file="clean-data_SWFWMD-STORET-WQ_2011-2020.RData" )
+```
+
+[top](#top)
+
+# References {#Refs}
+
+Dowle, M. & Srinivasan, A. (2021). data.table: Extension of `data.frame`. R package version 1.14.0. [https://CRAN.R-project.org/package=data.table](https://CRAN.R-project.org/package=data.table)
+
+R Core Team (2021). R: A Language and Environment for Statistical Computing. R Foundation for Statistical Computing, Vienna, Austria. [https://www.R-project.org/](https://www.R-project.org/)
+
+Wickham, H. (2011). The Split-Apply-Combine Strategy for Data Analysis. *Journal of Statistical Software*, 40(1): 1-29. [http://www.jstatsoft.org/v40/i01/](http://www.jstatsoft.org/v40/i01/)
+
+Wickham, H. (2021). tidyr: Tidy Messy Data. R package version 1.1.3. [https://CRAN.R-project.org/package=tidyr](https://CRAN.R-project.org/package=tidyr)
+
+Wickham, H., François, R., Henry, L. & Müller, K. (2021). dplyr: A Grammar of Data Manipulation. R package version 1.0.6. [https://CRAN.R-project.org/package=dplyr](https://CRAN.R-project.org/package=dplyr)
+
+[top](#top)
+  
+  
+  

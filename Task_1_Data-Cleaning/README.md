@@ -1,12 +1,10 @@
 # chnep
 CHNEP Water Atlas
 
-4/1/2022
+8/12/2022
 
 Data cleaning for Task 1 of CHNEP water quality trend analysis project.
 
-Before running the .R and .Rmd files, be sure to update the working directory to your local path in the setwd() call near the top of the script.
+Three R Markdown scripts ("01" prefix) contain data cleaning procedures for three datasets: CHNEP data provided by the USF Water Atlas team, WIN data, and STORET data. The R script ("02" prefix) binds the three clean datasets into a single dataframe.
 
-The input data provided by USF ('Trend Analysis - CHNEP - 2020 - Export.txt') and the clean output data ('CHNEP-WQ_clean-data_2011-2020.csv') are stored elsewhere (not on github).
-
-See the markdown document for details about the data cleaning script.
+The input data and the clean output data are stored elsewhere (not on github).
