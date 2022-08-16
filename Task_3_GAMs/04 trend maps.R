@@ -142,15 +142,15 @@ trend.map <- function( ANALYTE,
   
   # Generate trend map
   ggmap(basemap) +
-    # geom_point( data = this.dat[pt.idx,],
-    #             aes( x = Longitude, y = Latitude, size = Trend, color = Trend, fill = Trend, shape = Trend ) ) +
-    # geom_polygon( aes(x = long, y = lat, group = stratum, fill = Trend ),
-    #               data = strata.df, color = "#87878766", alpha = 0.4 ) +
-    # scale_size_manual( values = this.aes$size, drop=FALSE ) +
-    # scale_color_manual( values = this.aes$outline, drop=FALSE ) +
-    # scale_fill_manual( values = apply( as.matrix(this.aes$fill), 1, function(x) eval(parse(text=x)) ), drop=FALSE ) +
-    # scale_shape_manual( values = this.aes$shape, drop=FALSE ) +
-    # ggtitle( paste0( analyte.long.name, ' (', year.str, '-', year.end, ')'  ) ) +
+    geom_point( data = this.dat[pt.idx,],
+                aes( x = Longitude, y = Latitude, size = Trend, color = Trend, fill = Trend, shape = Trend ) ) +
+    geom_polygon( aes(x = long, y = lat, group = stratum, fill = Trend ),
+                  data = strata.df, color = "#87878766", alpha = 0.4 ) +
+    scale_size_manual( values = this.aes$size, drop=FALSE ) +
+    scale_color_manual( values = this.aes$outline, drop=FALSE ) +
+    scale_fill_manual( values = apply( as.matrix(this.aes$fill), 1, function(x) eval(parse(text=x)) ), drop=FALSE ) +
+    scale_shape_manual( values = this.aes$shape, drop=FALSE ) +
+    ggtitle( paste0( analyte.long.name, ' (', year.str, '-', year.end, ')'  ) ) +
     labs( x = 'Longitude', y = 'Latitude' ) +
     theme( axis.text = element_text(size=12),
            axis.title = element_text(size=14),
