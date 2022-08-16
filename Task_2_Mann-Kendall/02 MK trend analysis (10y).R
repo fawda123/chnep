@@ -18,10 +18,10 @@ source('udf_MK.trend.R')
 
 # Load clean dataset  
 setwd( dir.dat )
-load('CHNEP-WQ_clean-data_2011-2020.RData')
+load('clean-data_2011-2020.RData')
 
 # Format input data
-input.dat <- select( df3, c(Date,Stratum,Analyte,Result_Value,Result_Unit,Non_detect) )
+input.dat <- select( clean.data, c(Date,Unique.StationID,Analyte,Result_Value,Result_Unit,Non_detect) )
 colnames( input.dat ) <- c( 'Date', 'Station', 'Analyte', 'Value', 'Unit', 'Non_detect')
 
 # Subset data by date

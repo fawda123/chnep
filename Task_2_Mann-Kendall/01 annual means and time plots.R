@@ -16,12 +16,13 @@ source('udf_plot.time.R')
 
 # Load clean Water Atlas data
 setwd( dir.dat )
-dat <- read.csv('CHNEP-WQ_clean-data_2011-2020.csv' )
+dat <- read.csv('clean-data_2011-2020.csv' )
 
 # Format dataframe
-df1 <- dat[,c('Stratum','Analyte','Date','Result_Value','Result_Unit')]
+df1 <- dat[,c('Unique.StationID','Analyte','Date','Result_Value','Result_Unit')]
 colnames( df1 ) <- c('Station','Analyte','Date','Value','Unit')
 df1$Date <- df1$Date %>% as.Date('%Y-%m-%d')
+df1$Station <- sub(":",",",df1$Station)
 
 # Compute means
 dat.means <- annual.means( df1, MIN.OBS=0 )

@@ -14,7 +14,7 @@ if(!require(dplyr)) { install.packages('dplyr') }; library(dplyr)
 
 # Load user-defined functions
 setwd(dir.udf)
-source('udf_MK.trend.R')
+source('udf_MK.trend.usf.R')
 
 # Load clean dataset  
 setwd( dir.dat )
@@ -25,7 +25,7 @@ input.dat <- select( clean.data, c(Date,Unique.StationID,Analyte,Result_Value,Re
 colnames( input.dat ) <- c( 'Date', 'Station', 'Analyte', 'Value', 'Unit', 'Non_detect')
 
 # Subset data by date
-min.date <- as.Date('2016-01-01')
+min.date <- as.Date('2011-01-01')
 max.date <- as.Date('2020-12-31')
 input.dat <- input.dat[ which( input.dat$Date>=min.date & input.dat$Date<=max.date ), ]
 
@@ -64,7 +64,7 @@ for( i in 1:length(stations) ){
     dat.ij <- dat.i[ which( dat.i$Analyte==this.analyte ), ]
     # Run trend analysis (MK or SMK)
     if( nrow(dat.ij)>0 ){ 
-      this.result <- MK.trend( dat.ij, dir.udf=dir.udf )
+      this.result <- MK.trend.usf( dat.ij, dir.udf=dir.udf )  
       if( !is.null(this.result) ){
         # Write trend results to results.df
         results.df[ result.row, 'Station' ] <- this.result$Station
@@ -128,6 +128,6 @@ for( i in 1:length(stations) ){
 
 # Write trend analysis results to file
 setwd(dir.out)
-write.csv( results.df, "MK.trend.5y.results.csv", row.names=FALSE )
-save( results.df, file="MK.trend.5y.results.RData" )
+write.csv( results.df, "MK.trend.10y.USF.results.csv", row.names=FALSE )
+save( results.df, file="MK.trend.10y.USF.results.RData" )
 
