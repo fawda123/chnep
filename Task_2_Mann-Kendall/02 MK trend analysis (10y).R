@@ -11,6 +11,7 @@ dir.out <- c('C:\\Users\\miles.medina\\Documents\\UF Postdoc\\CHNEP\\Task 2\\R f
 # Load libraries
 if(!require(tidyr)) { install.packages('tidyr') }; library(tidyr)
 if(!require(dplyr)) { install.packages('dplyr') }; library(dplyr)
+if(!require(lubridate)) { install.packages('lubridate') }; library(lubridate)
 
 # Load user-defined functions
 setwd(dir.udf)
@@ -62,6 +63,7 @@ for( i in 1:length(stations) ){
     # Subset data by analyte
     this.analyte <- analytes[j]
     dat.ij <- dat.i[ which( dat.i$Analyte==this.analyte ), ]
+    dat.ij <- dat.ij[ order(dat.ij$Date), ]
     # Run trend analysis (MK or SMK)
     if( nrow(dat.ij)>0 ){ 
       this.result <- MK.trend( dat.ij, dir.udf=dir.udf, POR.min=120 )  # set min POR to 120 months (10 years)

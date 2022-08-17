@@ -58,7 +58,7 @@ aggregate.monthly <- function( DF, DATES=range(DF$Date),
   df <- inner_join( values, nondetects, by = 'Month' )
   
   # Generate time series
-  dates <- data.frame( Month = seq.Date( this.dat$Month[1], DATES[2], by='month') )
+  dates <- data.frame( Month = seq.Date( min(this.dat$Month), DATES[2], by='month') )
   out <- left_join( dates, df, by = 'Month' )
   colnames( out )[ which(colnames(out)=='Month') ] <- 'Date'
   

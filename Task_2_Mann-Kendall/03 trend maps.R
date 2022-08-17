@@ -17,7 +17,7 @@ dir.outmap <- c('C:\\Users\\miles.medina\\Documents\\UF Postdoc\\CHNEP\\Task 2\\
 
 # Load data and inputs
 setwd( dir.out )
-  load("MK.trend.10y.results.RData")  # 5y and 10y year trend directions (up/down) and categories (large/small)
+  load("MK.trend.10y.results.RData")  
 setwd( dir.dat )
   aes.up.red <- read.csv('aes_up-red.csv')
   aes.dn.red <- read.csv('aes_dn-red.csv')

@@ -58,6 +58,7 @@ for( i in 1:length(stations) ){
   # Subset data by station
   this.station <- stations[i]
   dat.i <- input.dat[ which( input.dat$Station==this.station ), ]
+  dat.ij <- dat.ij[ order(dat.ij$Date), ]
   for( j in 1:length(analytes) ){
     # Subset data by analyte
     this.analyte <- analytes[j]

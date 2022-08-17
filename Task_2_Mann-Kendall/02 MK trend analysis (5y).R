@@ -62,6 +62,7 @@ for( i in 1:length(stations) ){
     # Subset data by analyte
     this.analyte <- analytes[j]
     dat.ij <- dat.i[ which( dat.i$Analyte==this.analyte ), ]
+    dat.ij <- dat.ij[ order(dat.ij$Date), ]
     # Run trend analysis (MK or SMK)
     if( nrow(dat.ij)>0 ){ 
       this.result <- MK.trend( dat.ij, dir.udf=dir.udf )
