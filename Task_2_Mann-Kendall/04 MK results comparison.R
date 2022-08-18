@@ -12,8 +12,8 @@ dir.out <- c('C:\\Users\\miles.medina\\Documents\\UF Postdoc\\CHNEP\\Task 2\\R f
 
 # Load data 
 setwd( dir.out )
-  # load("MK.trend.10y.USF.results.RData")  # 1st comparison, using current data requirements
-  load("MK.trend.10y.results.RData")  # 2nd comparison, using 'proposed' data requirements
+  load("MK.trend.10y.USF.results.RData")  # 1st comparison, using current data requirements
+  # load("MK.trend.10y.results.RData")  # 2nd comparison, using 'proposed' data requirements
 setwd( dir.dat )
   USF.results <- read.csv('Trend Analysis - CHNEP - 2020 - Results.csv')
   grid.stations <- read.csv('grid-station-associations.csv')
@@ -135,6 +135,7 @@ setwd( dir.dat )
       notrun.stations <- all.results$Station[ which( !is.na(all.results$USF.MK.trend) &
                                                      is.na(all.results$MK.trend) ) ] %>% unique() %>% sort()
         # Find stratum-associated stations in `notrun.stations`
+        rm(match.idx)
         strata.stations <- logical()
         for( i in 1:length(notrun.stations) ){
           this.source <- strsplit( notrun.stations[i], ": " )[[1]][1]
@@ -145,25 +146,25 @@ setwd( dir.dat )
                                 grid.stations$Station==this.station )
           # Print result to console
           if( length(match.idx==1) ){
-            match.stations[i] <- TRUE
+            strata.stations[i] <- TRUE
             cat( paste0("i=",i,". ",this.source,": ",this.station," matched ",grid.stations$Agency[match.idx],
                         " ",grid.stations$Station[match.idx],"\n") )
           } else if( length(match.idx)>1 ){
-            match.stations[i] <- FALSE
+            strata.stations[i] <- FALSE
             cat( paste0("i=",i,". ",this.source,": ",this.station,". Multiple matches found.\n") )
           } else {
-            match.stations[i] <- FALSE
+            strata.stations[i] <- FALSE
             cat( paste0("i=",i,". ",this.source,": ",this.station,". No match found.\n") )
           }
         }  # // end i loop
         # Print strata stations
-        notrun.stations[which(match.stations)]
+        notrun.stations[which(strata.stations)]
         # Print non-strata stations
-        notrun.stations[-which(match.stations)]
+        notrun.stations[-which(strata.stations)]
         # Count 'not run' records associated with strata
         all.results[ which( !is.na(all.results$USF.MK.trend) &
                               is.na(all.results$MK.trend) &
-                              all.results$Station %in% notrun.stations[which(match.stations)] ), ] %>% nrow()
+                              all.results$Station %in% notrun.stations[which(strata.stations)] ), ] %>% nrow()
       
     # USF did not run vs. CCS ran analysis
     all.results[ which( is.na(all.results$USF.MK.trend) &
